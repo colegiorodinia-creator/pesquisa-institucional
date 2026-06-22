@@ -1,0 +1,584 @@
+/* =============================================================
+   Colégio Rodin — Custom Dashboard Styles
+   ============================================================= */
+
+/* ---------- Importar Design Tokens da Marca ---------------------- */
+@import url("colors_and_type.css");
+
+/* ---------- Reset & Estrutura Geral ------------------------------- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--rodin-paper);
+    color: var(--rodin-ink);
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ---------- Header & Navegação ------------------------------------- */
+.main-header {
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 2px solid var(--rodin-orange);
+}
+
+.header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.brand-lockup {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-text .eyebrow {
+    font-size: 11px;
+    letter-spacing: var(--tracking-eyebrow);
+    margin-bottom: var(--space-1);
+}
+
+.brand-text .display {
+    font-size: 32px;
+    line-height: var(--lh-tight);
+}
+
+.header-tag {
+    font-size: var(--fs-h3);
+}
+
+/* ---------- Menu de Abas (Tabs) ------------------------------------ */
+.tabs-nav {
+    background-color: var(--rodin-white);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.tabs-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    overflow-x: auto;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    outline: none;
+    padding: var(--space-4) var(--space-5);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: var(--fs-small);
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--fg-2);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all var(--dur) var(--ease-out);
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    color: var(--rodin-orange);
+    border-bottom-color: var(--rodin-cool-gray);
+}
+
+.tab-btn.active {
+    color: var(--rodin-orange);
+    border-bottom-color: var(--rodin-orange);
+}
+
+/* ---------- Conteúdo Principal ------------------------------------ */
+.dashboard-main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-6);
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+/* ---------- Seção de Filtros -------------------------------------- */
+.filters-section {
+    background-color: var(--rodin-white);
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-0);
+    box-shadow: var(--shadow-1);
+}
+
+.filters-section .eyebrow {
+    margin-bottom: var(--space-3);
+    color: var(--fg-3);
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-4);
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.filter-group label {
+    font-weight: 500;
+    color: var(--fg-2);
+}
+
+.filter-select, .filter-input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-2);
+    font-family: var(--font-body);
+    font-size: var(--fs-small);
+    background-color: var(--rodin-white);
+    color: var(--rodin-ink);
+    outline: none;
+    transition: border-color var(--dur) var(--ease-out);
+}
+
+.filter-select:focus, .filter-input:focus {
+    border-color: var(--rodin-orange);
+}
+
+.select-highlight {
+    border-width: 2px;
+    font-weight: 600;
+}
+
+.reset-group {
+    max-width: 160px;
+}
+
+/* ---------- Visões (Tab Content) ----------------------------------- */
+.tab-content {
+    display: none;
+    flex-direction: column;
+    gap: var(--space-5);
+    animation: fadeIn var(--dur-slow) var(--ease-out);
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ---------- KPIs / Cards ------------------------------------------ */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-4);
+}
+
+.kpi-card {
+    background-color: var(--rodin-white);
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-0);
+    box-shadow: var(--shadow-1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.kpi-card .eyebrow {
+    font-size: 11px;
+    color: var(--fg-3);
+    margin-bottom: var(--space-2);
+}
+
+.kpi-value {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 36px;
+    line-height: var(--lh-tight);
+    color: var(--rodin-graphite);
+}
+
+.kpi-value-text {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 20px;
+    color: var(--rodin-graphite);
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-desc {
+    margin-top: var(--space-2);
+    color: var(--fg-3);
+}
+
+/* ---------- Linha de Gráficos ------------------------------------- */
+.charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: var(--space-5);
+}
+
+@media (max-width: 768px) {
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.chart-card {
+    background-color: var(--rodin-white);
+    padding: var(--space-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-0);
+    box-shadow: var(--shadow-1);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.chart-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.chart-card h3 {
+    font-size: var(--fs-lead);
+    letter-spacing: var(--tracking-tight);
+    border-left: 3px solid var(--rodin-orange);
+    padding-left: var(--space-2);
+}
+
+.chart-wrapper {
+    position: relative;
+    width: 100%;
+    min-height: 380px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ---------- Barra de Seleção Individual ----------------------------- */
+.selection-bar {
+    background-color: var(--rodin-white);
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-0);
+    box-shadow: var(--shadow-1);
+    display: flex;
+    align-items: center;
+}
+
+.selection-bar.split {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr;
+    gap: var(--space-4);
+}
+
+.selection-bar.split-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: var(--space-4);
+}
+
+.selection-bar.split-btn .filter-group {
+    flex: 1;
+}
+
+/* ---------- Botões (Buttons) --------------------------------------- */
+.btn {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: var(--fs-small);
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all var(--dur) var(--ease-out);
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+}
+
+.btn-primary {
+    background-color: var(--rodin-orange);
+    color: var(--fg-on-accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--rodin-orange-080);
+    text-decoration: underline;
+}
+
+.btn-ghost {
+    background-color: transparent;
+    border-color: var(--rodin-ink);
+    color: var(--rodin-ink);
+}
+
+.btn-ghost:hover {
+    background-color: rgba(31, 34, 34, 0.05);
+    text-decoration: underline;
+}
+
+/* ---------- Distribuição Likert ------------------------------------ */
+.likert-distribution-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-4);
+    margin-top: var(--space-3);
+}
+
+.likert-attr-card {
+    background-color: var(--rodin-paper);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+}
+
+.likert-attr-title {
+    font-weight: 700;
+    font-size: var(--fs-small);
+    margin-bottom: var(--space-2);
+}
+
+.likert-bar-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.likert-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.likert-label {
+    width: 90px;
+    font-size: var(--fs-eyebrow);
+    color: var(--fg-2);
+}
+
+.likert-track {
+    flex: 1;
+    height: 8px;
+    background-color: rgba(31,34,34,0.06);
+    position: relative;
+}
+
+.likert-fill {
+    height: 100%;
+    background-color: var(--rodin-orange);
+    width: 0;
+    transition: width 0.6s var(--ease-out);
+}
+
+.likert-val {
+    width: 35px;
+    text-align: right;
+    font-size: var(--fs-eyebrow);
+    font-weight: 600;
+}
+
+/* Modificadores de cor para as categorias de respostas Likert */
+.fill-sempre { background-color: #4CAF50; }
+.fill-quasesempre { background-color: #8BC34A; }
+.fill-poucasvezes { background-color: #FFEB3B; }
+.fill-nunca { background-color: #F44336; }
+
+/* ---------- Heatmap (Tabela de Calor) ------------------------------ */
+.heatmap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+}
+
+.heatmap-legend {
+    display: flex;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-small);
+    color: var(--fg-2);
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+}
+
+.legend-red { background-color: #FFCDD2; }
+.legend-yellow { background-color: #FFF9C4; }
+.legend-green { background-color: #C8E6C9; }
+.legend-blue { background-color: #BBDEFB; }
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.heatmap-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-small);
+    text-align: left;
+}
+
+.heatmap-table th, .heatmap-table td {
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+}
+
+.heatmap-table th {
+    background-color: var(--rodin-graphite);
+    color: var(--fg-on-dark);
+    font-family: var(--font-display);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: var(--tracking-eyebrow);
+}
+
+.heatmap-table td.cell-score {
+    text-align: center;
+    font-weight: 700;
+    transition: transform var(--dur) var(--ease-out);
+}
+
+.heatmap-table tr:hover {
+    background-color: rgba(31,34,34,0.02);
+}
+
+/* Cores das Células do Heatmap */
+.score-critico { background-color: #FFCDD2; color: #B71C1C; }
+.score-regular { background-color: #FFF9C4; color: #F57F17; }
+.score-bom { background-color: #C8E6C9; color: #1B5E20; }
+.score-excelente { background-color: #BBDEFB; color: #0D47A1; }
+
+/* ---------- Tabelas Gerais (Mapeamento e Comentários) --------------- */
+.comments-header, .map-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+}
+
+.comments-table-wrapper {
+    max-height: 550px;
+    overflow-y: auto;
+}
+
+.comments-table, .mapping-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-small);
+    text-align: left;
+}
+
+.comments-table th, .comments-table td, 
+.mapping-table th, .mapping-table td {
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+}
+
+.comments-table th, .mapping-table th {
+    background-color: var(--rodin-graphite);
+    color: var(--fg-on-dark);
+    font-family: var(--font-display);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: var(--tracking-eyebrow);
+    position: sticky;
+    top: 0;
+}
+
+.comments-table tr:hover, .mapping-table tr:hover {
+    background-color: rgba(31,34,34,0.02);
+}
+
+.comments-table td.comment-text {
+    line-height: 1.5;
+    font-style: italic;
+    color: var(--rodin-ink);
+}
+
+.mapping-table input {
+    width: 100%;
+    padding: var(--space-2);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-2);
+    font-family: var(--font-body);
+    font-size: var(--fs-small);
+}
+
+.mapping-table input:focus {
+    border-color: var(--rodin-orange);
+    outline: none;
+}
+
+/* ---------- Rodapé ------------------------------------------------ */
+.main-footer {
+    background-color: var(--rodin-graphite);
+    color: var(--fg-on-dark);
+    padding: var(--space-4);
+    text-align: center;
+    border-top: 2px solid var(--rodin-orange);
+    margin-top: auto;
+}
+
+.main-footer p {
+    color: var(--rodin-concrete);
+}
+
+/* ---------- Utilitários e Helpers ---------------------------------- */
+.uppercase { text-transform: uppercase; }
+.text-success { color: #2E7D32 !important; }
+.text-danger { color: #C62828 !important; }

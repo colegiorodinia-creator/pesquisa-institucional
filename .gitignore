@@ -1,0 +1,11 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Office/Excel temporary files
+~$*
+
+# Local IDE and temporary files
+.vscode/
+.gemini/
+.antigravity/

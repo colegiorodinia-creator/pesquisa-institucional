@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa Institucional — Colégio Rodin</title>
+    <!-- Importação de Estilo de Cores e Tipos do Rodin -->
+    <link rel="stylesheet" href="colors_and_type.css">
+    <link rel="stylesheet" href="style.css">
+    <!-- Bibliotecas Necessárias via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="u-paper-bg">
+
+    <!-- Header Principal -->
+    <header class="main-header u-graphite-bg">
+        <div class="header-container">
+            <div class="brand-lockup">
+                <span class="rodin-divider"></span>
+                <div class="brand-text">
+                    <span class="eyebrow u-orange">Pesquisa Institucional</span>
+                    <h1 class="display">Colégio Rodin</h1>
+                </div>
+            </div>
+            <div class="header-tag">
+                <span class="script u-orange">Raio-X Docente 2026</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Barra de Navegação por Abas -->
+    <nav class="tabs-nav">
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="macro">VISÃO MACRO</button>
+            <button class="tab-btn" data-tab="professor">RAIO-X PROFESSOR</button>
+            <button class="tab-btn" data-tab="turma">RAIO-X TURMA</button>
+            <button class="tab-btn" data-tab="qualitativo">PAINEL QUALITATIVO</button>
+            <button class="tab-btn" data-tab="mapeamento">MAPEAMENTO ATIVO</button>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <main class="dashboard-main">
+        
+        <!-- Filtros Globais (Apenas visíveis/ativos nas visões correspondentes) -->
+        <section class="filters-section" id="global-filters">
+            <h2 class="eyebrow">Filtros Globais</h2>
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="filter-segmento" class="small">Segmento</label>
+                    <select id="filter-segmento" class="filter-select">
+                        <option value="">Todos os Segmentos</option>
+                        <option value="Ensino Fundamental II">Ensino Fundamental II</option>
+                        <option value="Ensino Médio">Ensino Médio</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-turma-pasta" class="small">Ano/Série (Grupo)</label>
+                    <select id="filter-turma-pasta" class="filter-select">
+                        <option value="">Todas os Anos/Séries</option>
+                        <!-- Inserido dinamicamente via JS -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-turma-declarada" class="small">Turma Específica</label>
+                    <select id="filter-turma-declarada" class="filter-select">
+                        <option value="">Todas as Turmas</option>
+                        <!-- Inserido dinamicamente via JS -->
+                    </select>
+                </div>
+                <div class="filter-group reset-group">
+                    <button id="btn-reset-filters" class="btn btn-ghost">Limpar Filtros</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visão 1: Visão Macro -->
+        <section id="tab-macro" class="tab-content active">
+            <!-- Grid de KPIs -->
+            <div class="kpi-grid">
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Média Geral Escola</span>
+                    <div class="kpi-value" id="kpi-media-geral">0.00</div>
+                    <span class="kpi-desc small">Escala de 0.00 a 10.00</span>
+                </div>
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Fund. II (6º ao 9º)</span>
+                    <div class="kpi-value" id="kpi-media-fund2">0.00</div>
+                    <span class="kpi-desc small">Média segmento</span>
+                </div>
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Ensino Médio</span>
+                    <div class="kpi-value" id="kpi-media-medio">0.00</div>
+                    <span class="kpi-desc small">Média segmento</span>
+                </div>
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Total de Respostas</span>
+                    <div class="kpi-value" id="kpi-total-respostas">0</div>
+                    <span class="kpi-desc small">Avaliações docentes individuais</span>
+                </div>
+            </div>
+
+            <!-- Gráficos Principais -->
+            <div class="charts-row">
+                <div class="chart-card bg-card">
+                    <h3 class="h3 uppercase">Média Geral por Atributo</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-macro-atributos"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card bg-card">
+                    <h3 class="h3 uppercase">Ranking de Docentes</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-macro-professores"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-card bg-card full-width">
+                    <h3 class="h3 uppercase">Comparativo entre Turmas</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-macro-turmas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visão 2: Raio-X por Professor -->
+        <section id="tab-professor" class="tab-content">
+            <div class="selection-bar bg-card">
+                <div class="filter-group">
+                    <label for="select-professor" class="small">Selecione o Professor</label>
+                    <select id="select-professor" class="filter-select select-highlight">
+                        <!-- Inserido dinamicamente via JS -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="kpi-grid" id="prof-kpi-row">
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Média Geral do Professor</span>
+                    <div class="kpi-value u-orange" id="kpi-prof-media">0.00</div>
+                    <span class="kpi-desc small">Nota consolidada do docente</span>
+                </div>
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Total de Avaliações</span>
+                    <div class="kpi-value" id="kpi-prof-total">0</div>
+                    <span class="kpi-desc small">Votos recebidos</span>
+                </div>
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Destaques</span>
+                    <div class="kpi-value-text text-success" id="kpi-prof-forte">N/A</div>
+                    <span class="kpi-desc small">Atributos com nota &gt; 9.0</span>
+                </div>
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Pontos de Atenção</span>
+                    <div class="kpi-value-text text-danger" id="kpi-prof-fraco">N/A</div>
+                    <span class="kpi-desc small">Atributos com nota &lt; 6.0</span>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-card bg-card">
+                    <h3 class="h3 uppercase">Radar de Competências</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-prof-radar"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card bg-card">
+                    <h3 class="h3 uppercase">Desempenho por Turma</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-prof-turmas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribuição Likert -->
+            <div class="charts-row">
+                <div class="chart-card bg-card full-width">
+                    <h3 class="h3 uppercase">Distribuição Percentual de Respostas (Likert)</h3>
+                    <div class="heatmap-legend" style="margin-top: var(--space-2); margin-bottom: var(--space-2); display: flex; gap: var(--space-4); flex-wrap: wrap;">
+                        <span class="legend-item"><span class="legend-color" style="background-color: #4CAF50; width: 12px; height: 12px; display: inline-block;"></span> Sempre (4)</span>
+                        <span class="legend-item"><span class="legend-color" style="background-color: #8BC34A; width: 12px; height: 12px; display: inline-block;"></span> Quase sempre (3)</span>
+                        <span class="legend-item"><span class="legend-color" style="background-color: #FFEB3B; width: 12px; height: 12px; display: inline-block;"></span> Poucas vezes (2)</span>
+                        <span class="legend-item"><span class="legend-color" style="background-color: #F44336; width: 12px; height: 12px; display: inline-block;"></span> Nunca (1)</span>
+                    </div>
+                    <div class="likert-distribution-container" id="likert-dist-grid">
+                        <!-- Inserido dinamicamente via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visão 3: Raio-X por Turma -->
+        <section id="tab-turma" class="tab-content">
+            <div class="selection-bar bg-card">
+                <div class="filter-group">
+                    <label for="select-turma" class="small">Selecione a Turma</label>
+                    <select id="select-turma" class="filter-select select-highlight">
+                        <!-- Inserido dinamicamente via JS -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Média Geral da Turma</span>
+                    <div class="kpi-value" id="kpi-turma-media">0.00</div>
+                    <span class="kpi-desc small">Média de todos os professores</span>
+                </div>
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Total de Respostas</span>
+                    <div class="kpi-value" id="kpi-turma-total">0</div>
+                    <span class="kpi-desc small">Formulários respondidos</span>
+                </div>
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Docente Destaque</span>
+                    <div class="kpi-value-text text-success" id="kpi-turma-destaque-prof">N/A</div>
+                    <span class="kpi-desc small">Melhor avaliação nesta turma</span>
+                </div>
+                <div class="kpi-card bg-card">
+                    <span class="eyebrow">Atributo Mais Forte</span>
+                    <div class="kpi-value-text" id="kpi-turma-destaque-attr">N/A</div>
+                    <span class="kpi-desc small">Maior média nos atributos</span>
+                </div>
+            </div>
+
+            <!-- Heatmap da Turma -->
+            <div class="charts-row">
+                <div class="chart-card bg-card full-width">
+                    <div class="heatmap-header">
+                        <h3 class="h3 uppercase">Heatmap de Notas — Professores vs. Atributos</h3>
+                        <div class="heatmap-legend">
+                            <span class="legend-item"><span class="legend-color legend-red"></span> Crítico (&lt; 5.0)</span>
+                            <span class="legend-item"><span class="legend-color legend-yellow"></span> Regular (5.0 - 7.0)</span>
+                            <span class="legend-item"><span class="legend-color legend-green"></span> Bom (7.0 - 8.5)</span>
+                            <span class="legend-item"><span class="legend-color legend-blue"></span> Excelente (&ge; 8.5)</span>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="heatmap-table" id="heatmap-table-element">
+                            <thead>
+                                <tr>
+                                    <th>Professor</th>
+                                    <th>Didática</th>
+                                    <th>Apoio</th>
+                                    <th>Tempo</th>
+                                    <th>Avaliação</th>
+                                    <th>Clima</th>
+                                    <th>Respeito</th>
+                                    <th>Domínio</th>
+                                    <th>Média</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Inserido dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visão 4: Painel Qualitativo -->
+        <section id="tab-qualitativo" class="tab-content">
+            <div class="selection-bar bg-card split">
+                <div class="filter-group">
+                    <label for="select-qual-prof" class="small">Filtrar por Professor</label>
+                    <select id="select-qual-prof" class="filter-select">
+                        <option value="">Todos os Professores</option>
+                        <!-- Inserido dinamicamente via JS -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="select-qual-turma" class="small">Filtrar por Turma</label>
+                    <select id="select-qual-turma" class="filter-select">
+                        <option value="">Todas as Turmas</option>
+                        <!-- Inserido dinamicamente via JS -->
+                    </select>
+                </div>
+                <div class="filter-group search-group">
+                    <label for="search-comments" class="small">Buscar no Comentário</label>
+                    <input type="text" id="search-comments" class="filter-input" placeholder="Digite termos como 'atrasa', 'elogio', etc...">
+                </div>
+            </div>
+
+            <!-- Tabela de Comentários -->
+            <div class="charts-row">
+                <div class="chart-card bg-card full-width">
+                    <div class="comments-header">
+                        <h3 class="h3 uppercase">Comentários e Sugestões Declarados</h3>
+                        <div class="small" id="comments-count">Exibindo 0 comentários</div>
+                    </div>
+                    <div class="table-responsive comments-table-wrapper">
+                        <table class="comments-table" id="comments-table-element">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">Turma</th>
+                                    <th style="width: 20%;">Professor Associado</th>
+                                    <th style="width: 65%;">Comentário Real do Aluno</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Inserido dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Aba 5: Mapeamento de Professores -->
+        <section id="tab-mapeamento" class="tab-content">
+            <div class="selection-bar bg-card split-btn">
+                <div class="filter-group">
+                    <label for="select-map-turma" class="small">Selecione a Turma para Mapear</label>
+                    <select id="select-map-turma" class="filter-select select-highlight">
+                        <!-- Inserido dinamicamente via JS -->
+                    </select>
+                </div>
+                <div class="map-actions">
+                    <button id="btn-save-mapping" class="btn btn-primary">SALVAR ALTERAÇÕES</button>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-card bg-card full-width">
+                    <div class="map-header">
+                        <h3 class="h3 uppercase">Lista de Blocos do CSV vs. Professor Mapeado</h3>
+                        <p class="small">O OCR do formulário gerou um mapeamento inicial sugerido. Caso haja nomes incorretos ou faltantes, faça o ajuste nos campos abaixo e clique em "Salvar Alterações".</p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="mapping-table" id="mapping-table-element">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">Bloco no CSV</th>
+                                    <th style="width: 15%;">Coluna de Início</th>
+                                    <th style="width: 30%;">Nome do Professor (Editável)</th>
+                                    <th style="width: 20%;">Disciplina (Editável)</th>
+                                    <th style="width: 20%;">Turmas Específicas (Opcional)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Inserido dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="main-footer">
+        <p class="small">Colégio Rodin — Todos os direitos reservados. Desenvolvimento de dashboards gerenciais de alto nível.</p>
+    </footer>
+
+    <!-- Carregamento do Aplicativo -->
+    <script src="app.js?v=3"></script>
+</body>
+</html>

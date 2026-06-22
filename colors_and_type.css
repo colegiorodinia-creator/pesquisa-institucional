@@ -1,0 +1,279 @@
+/* =============================================================
+   Colégio Rodin — Design Tokens
+   Type + Color foundations. Import this on every page.
+   ============================================================= */
+
+/* ---------- Fonts ------------------------------------------------- */
+/* Helvetica Neue LT Std — official brand fonts uploaded by client.
+   Brand uses the Extended widths for display weights (matches the wide
+   "RODIN" in the lockup). Roman covers regular body. */
+@font-face {
+  font-family: "Helvetica Neue LT";
+  src: url("fonts/HELVETICANEUELTSTD-LTEX.OTF") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Neue LT";
+  src: url("fonts/HELVETICANEUELTSTD-ROMAN.OTF") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Neue LT";
+  src: url("fonts/HELVETICANEUELTSTD-HVEX.OTF") format("opentype");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Hesterica";
+  src: url("fonts/Hesterica.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Path-relative fallback for nested pages (slides/, ui_kits/, preview/) */
+@font-face {
+  font-family: "Helvetica Neue LT";
+  src: url("../fonts/HELVETICANEUELTSTD-LTEX.OTF") format("opentype");
+  font-weight: 300; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Neue LT";
+  src: url("../fonts/HELVETICANEUELTSTD-ROMAN.OTF") format("opentype");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Neue LT";
+  src: url("../fonts/HELVETICANEUELTSTD-HVEX.OTF") format("opentype");
+  font-weight: 800; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Hesterica";
+  src: url("../fonts/Hesterica.otf") format("opentype");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+
+/* ---------- Color tokens ----------------------------------------- */
+:root {
+  /* Primary — Cores Prioritárias */
+  --rodin-orange:        #F45206; /* PANTONE 166C  | Laranja Rodin — Energia e Paixão */
+  --rodin-graphite:      #404545; /* PANTONE 446C  | Cinza Escuro — Solidez e Foco    */
+
+  /* Secondary — Cores de Apoio */
+  --rodin-concrete:      #AAA38E; /* PANTONE 7536C | Cimento Queimado — Estética Moderna */
+  --rodin-cool-gray:     #969491; /* PANTONE Cool Gray 8C | Grey — Equilíbrio       */
+  --rodin-beige:         #DBD4C2; /* PANTONE 7534C | Bege Mudo — Acolhimento        */
+
+  /* Neutral scale (derived) */
+  --rodin-ink:           #1F2222; /* deeper than graphite, used for body copy on white */
+  --rodin-paper:         #F6F4EF; /* off-white "paper" for warm backgrounds */
+  --rodin-white:         #FFFFFF;
+  --rodin-line:          rgba(31, 34, 34, 0.12); /* subtle hairline on light bg */
+  --rodin-line-strong:   rgba(31, 34, 34, 0.24);
+
+  /* Tints (for hover/press, never invent new hues) */
+  --rodin-orange-080:    #ED6A2A;  /* lighter — hover on orange */
+  --rodin-orange-060:    #F8814D;
+  --rodin-orange-press:  #C5400B;  /* press */
+  --rodin-graphite-080:  #5A5F5F;
+  --rodin-graphite-060:  #7D8181;
+
+  /* Semantic surfaces */
+  --bg:                  var(--rodin-white);
+  --bg-warm:             var(--rodin-paper);
+  --bg-inverse:          var(--rodin-graphite);
+  --bg-accent:           var(--rodin-orange);
+
+  --fg-1:                var(--rodin-ink);        /* primary text */
+  --fg-2:                #5A5F5F;                 /* secondary text */
+  --fg-3:                #7D8181;                 /* tertiary / metadata */
+  --fg-on-dark:          var(--rodin-white);
+  --fg-on-accent:        var(--rodin-white);
+  --fg-accent:           var(--rodin-orange);
+
+  --border:              var(--rodin-line);
+  --border-strong:       var(--rodin-line-strong);
+  --divider-accent:      var(--rodin-orange); /* the orange vertical bar from the lockup */
+
+  /* Spacing — 4px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+
+  /* Radii — kept tight, brand is minimalist/architectural */
+  --radius-0: 0px;
+  --radius-1: 2px;
+  --radius-2: 4px;
+  --radius-3: 8px;
+  --radius-pill: 999px;
+
+  /* Elevation — restrained; brand prefers flat */
+  --shadow-1: 0 1px 2px rgba(31, 34, 34, 0.06);
+  --shadow-2: 0 4px 16px rgba(31, 34, 34, 0.08);
+  --shadow-3: 0 18px 48px rgba(31, 34, 34, 0.14);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 360ms;
+}
+
+/* ---------- Brand textures --------------------------------------- */
+/* "Cimento Queimado" — assinatura visual da marca para artes digitais
+   (templates de social, capas, hero banners, peças impressas). Sempre
+   aplicar sobre fundo escuro; combinar com texto branco ou Laranja Rodin. */
+:root {
+  --tex-cimento: url("assets/texture-cimento-queimado.png");
+}
+/* Nested-path mirror so preview/, slides/, ui_kits/ resolve the same var. */
+.nested-tex-cimento { background-image: url("../assets/texture-cimento-queimado.png"); }
+
+/* ---------- Type scale ------------------------------------------- */
+:root {
+  /* Display & Heads — Helvetica Neue LT Heavy/Black */
+  --font-display: "Helvetica Neue LT", "Helvetica Neue", "Helvetica", Arial, sans-serif;
+  --font-body:    "Helvetica Neue LT", "Helvetica Neue", "Helvetica", Arial, sans-serif;
+  --font-script:  "Hesterica", "Helvetica Neue LT", serif; /* signature/subhead accent */
+
+  /* Sizes — large-bold-uppercase headlines are the brand "voice" */
+  --fs-display:   88px;  /* hero / outdoor */
+  --fs-h1:        56px;
+  --fs-h2:        40px;
+  --fs-h3:        28px;
+  --fs-h4:        22px;
+  --fs-lead:      20px;
+  --fs-body:      16px;
+  --fs-small:     14px;
+  --fs-eyebrow:   12px;  /* uppercase eyebrows */
+
+  --lh-tight: 1.02;
+  --lh-snug:  1.12;
+  --lh-cozy:  1.28;
+  --lh-body:  1.55;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0em;
+  --tracking-loose: 0.08em;   /* "colégio" letter-spacing in lockup */
+  --tracking-eyebrow: 0.18em; /* uppercase eyebrows */
+}
+
+/* ---------- Base ------------------------------------------------- */
+html, body {
+  background: var(--bg);
+  color: var(--fg-1);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- Semantic type classes -------------------------------- */
+.display, h1.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-display);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  text-transform: uppercase;
+  color: var(--fg-1);
+  text-wrap: balance;
+}
+h1, .h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-h1);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: var(--fg-1);
+}
+h2, .h2 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-h2);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: var(--fg-1);
+}
+h3, .h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-h3);
+  line-height: var(--lh-cozy);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-1);
+  text-wrap: balance;
+}
+h4, .h4 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-h4);
+  line-height: var(--lh-cozy);
+  color: var(--fg-1);
+}
+.eyebrow {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.lead {
+  font-family: var(--font-body);
+  font-weight: 300;
+  font-size: var(--fs-lead);
+  line-height: var(--lh-body);
+  color: var(--fg-1);
+}
+p, .body {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--fg-1);
+  text-wrap: pretty;
+}
+small, .small {
+  font-size: var(--fs-small);
+  color: var(--fg-2);
+}
+.script {
+  font-family: var(--font-script);
+  font-weight: 400;
+  line-height: 1.0;
+}
+
+/* ---------- Brand utilities --------------------------------------- */
+.u-orange { color: var(--rodin-orange); }
+.u-graphite { color: var(--rodin-graphite); }
+.u-paper-bg { background: var(--rodin-paper); }
+.u-graphite-bg { background: var(--rodin-graphite); color: var(--fg-on-dark); }
+.u-orange-bg { background: var(--rodin-orange); color: var(--fg-on-accent); }
+.u-beige-bg { background: var(--rodin-beige); }
+
+/* The vertical orange divider — a signature brand element. */
+.rodin-divider {
+  display: inline-block;
+  width: 2px;
+  background: var(--rodin-orange);
+  align-self: stretch;
+}
