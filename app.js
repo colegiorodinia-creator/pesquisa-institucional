@@ -536,27 +536,43 @@ async function loadData(useSupabase = false) {
         try {
             console.log("[SUPABASE] Buscando dados remotos do PostgreSQL...");
             
-            // 1. Obter todas as respostas do Supabase usando paginação (limite padrão do PostgREST é 1000)
-            let resData = [];
-            let start = 0;
-            let limit = 1000;
-            let hasMore = true;
+            console.time("[SUPABASE] Tempo de Carga");
             
-            while (hasMore) {
-                const { data: batch, error: errDb } = await supabaseClient
-                    .from('respostas')
-                    .select('*')
-                    .range(start, start + limit - 1);
-                    
-                if (errDb) throw errDb;
+            // 1. Obter a contagem total de registros para paralelizar as requisições
+            const { count, error: countErr } = await supabaseClient
+                .from('respostas')
+                .select('*', { count: 'exact', head: true });
                 
-                resData = resData.concat(batch);
-                if (batch.length < limit) {
-                    hasMore = false;
-                } else {
-                    start += limit;
+            if (countErr) throw countErr;
+            
+            console.log(`[SUPABASE] Total de registros encontrados: ${count}. Disparando cargas paralelas...`);
+            
+            const limit = 1000;
+            const numRequests = Math.ceil(count / limit);
+            const promises = [];
+            
+            for (let i = 0; i < numRequests; i++) {
+                const startRange = i * limit;
+                const endRange = startRange + limit - 1;
+                promises.push(
+                    supabaseClient
+                        .from('respostas')
+                        .select('*')
+                        .range(startRange, endRange)
+                );
+            }
+            
+            const results = await Promise.all(promises);
+            let resData = [];
+            for (const { data: batch, error: errDb } of results) {
+                if (errDb) throw errDb;
+                if (batch) {
+                    resData = resData.concat(batch);
                 }
             }
+            
+            console.timeEnd("[SUPABASE] Tempo de Carga");
+            console.log(`[SUPABASE] Carga de ${resData.length} registros concluída.`);
             
             // 2. Obter mapeamentos do Supabase
             const { data: mapData, error: errMap } = await supabaseClient
