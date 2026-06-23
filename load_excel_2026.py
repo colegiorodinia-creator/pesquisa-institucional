@@ -6,6 +6,7 @@ import json
 from dotenv import load_dotenv
 import urllib.request
 import urllib.error
+import re
 
 # Forçar console UTF-8 para evitar caracteres quebrados em Windows
 if hasattr(sys.stdout, 'reconfigure'):
@@ -46,17 +47,12 @@ def clean_turma(name, sheet_name):
     
     name_upper = name.strip().upper()
     letra = None
-    for char in ['A', 'B', 'C', 'D']:
-        if f" {char}" in name_upper or name_upper.endswith(char):
-            letra = char
-            break
-            
-    if not letra:
-        for char in ['A', 'B', 'C', 'D']:
-            if char in name_upper:
-                letra = char
-                break
-                
+    
+    # Usar regex para encontrar a letra isolada da turma (A, B, C, D)
+    match = re.search(r'\b([A-D])\b', name_upper)
+    if match:
+        letra = match.group(1)
+        
     if not letra:
         letra = 'A'
         
