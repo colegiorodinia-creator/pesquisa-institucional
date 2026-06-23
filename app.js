@@ -2,10 +2,66 @@
 // Colégio Rodin — Dashboard Logic (app.js)
 // =============================================================
 
+console.log("[DEBUG] app.js carregado no navegador com sucesso!");
 // Estado Global da Aplicação
 let rawData = null;
 let mappingData = null;
 let activeTab = 'macro';
+let currentUserProfile = null; // { role: 'admin'|'professor', nome_professor: '...' }
+
+// Configurações do Supabase (Insira as credenciais do seu projeto abaixo se for hospedar de forma 100% estática)
+const SUPABASE_CONFIG = {
+    url: "https://aykxsgxzrxpwtaptzodi.supabase.co", 
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5a3hzZ3h6cnhwd3RhcHR6b2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNTMyNzYsImV4cCI6MjA5NzcyOTI3Nn0.hqjYHYVvlyx2YOTuGZb1PTreVvLy1w9rZ94NXCHTfv8"
+};
+
+let supabaseClient = null;
+
+async function initSupabaseClient() {
+    // Verificar se as credenciais do Supabase são válidas e não apenas placeholders
+    const isPlaceholder = (str) => {
+        if (!str) return true;
+        const s = String(str).toLowerCase();
+        return s.includes("seu-projeto") || s.includes("sua-chave") || s.includes("xxxxx") || s.trim() === "";
+    };
+
+    // 1. Tentar obter a configuração dinamicamente do servidor local primeiro (se rodando localmente)
+    try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+            const config = await res.json();
+            if (config.SUPABASE_URL && config.SUPABASE_ANON_KEY && 
+                !isPlaceholder(config.SUPABASE_URL) && !isPlaceholder(config.SUPABASE_ANON_KEY)) {
+                
+                if (window.supabase && typeof window.supabase.createClient === 'function') {
+                    supabaseClient = window.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+                    console.log("[SUPABASE] Cliente inicializado com as credenciais dinâmicas do servidor local.");
+                    return true;
+                } else {
+                    console.warn("[SUPABASE] Biblioteca do Supabase JS não carregada.");
+                }
+            }
+        }
+    } catch (e) {
+        // Fallback silencioso para constantes locais
+    }
+    
+    // 2. Fallback para constantes locais
+    if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey && 
+        !isPlaceholder(SUPABASE_CONFIG.url) && !isPlaceholder(SUPABASE_CONFIG.anonKey)) {
+        
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+            supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+            console.log("[SUPABASE] Cliente inicializado com as credenciais estáticas do front-end.");
+            return true;
+        } else {
+            console.warn("[SUPABASE] Biblioteca do Supabase JS não carregada.");
+        }
+    }
+    
+    console.log("[INFO] Supabase não inicializado ou chaves são placeholders. Rodando em modo local legado.");
+    return false;
+}
 
 // Instâncias Globais dos Gráficos do Chart.js (para destruição e recriação)
 let chartMacroAtributos = null;
@@ -131,10 +187,271 @@ const customMarkersPlugin = {
     }
 };
 
-// Inicialização da Aplicação
-document.addEventListener('DOMContentLoaded', () => {
-    initApp();
-});
+
+
+async function fetchUserProfile(useSupabase) {
+    if (useSupabase && supabaseClient) {
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (user) {
+                const { data, error } = await supabaseClient
+                    .from('professores_perfis')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+                if (!error && data) {
+                    currentUserProfile = data;
+                    console.log("[AUTH] Perfil carregado do Supabase:", currentUserProfile);
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.error("Erro ao buscar perfil no Supabase:", e);
+        }
+    } else {
+        // Fallback local legado: carregar dados de sessão do backend Python
+        try {
+            const res = await fetch('/api/session');
+            if (res.ok) {
+                const sessionData = await res.json();
+                if (sessionData && sessionData.role) {
+                    currentUserProfile = {
+                        role: sessionData.role,
+                        nome_professor: sessionData.nome_professor || sessionData.name || ""
+                    };
+                    console.log("[AUTH] Perfil carregado da sessão local:", currentUserProfile);
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.error("Erro ao buscar sessão no servidor local:", e);
+        }
+    }
+    return false;
+}
+
+function applyRBACUI() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabsNav = document.querySelector('.tabs-nav');
+    
+    if (currentUserProfile && currentUserProfile.role === 'professor') {
+        console.log("[RBAC] Aplicando restrições de Professor para:", currentUserProfile.nome_professor);
+        
+        // 1. Ocultar o menu inteiro de abas para o professor
+        if (tabsNav) {
+            tabsNav.style.display = 'none';
+        }
+        
+        // Ocultar filtros globais da diretoria
+        const globalFilters = document.getElementById('global-filters');
+        if (globalFilters) {
+            globalFilters.style.display = 'none';
+        }
+        
+        // Definir aba ativa como 'professor' por padrão e ocultar as demais classes ativas
+        activeTab = 'professor';
+        document.querySelectorAll('.tab-content').forEach(content => {
+            if (content.id === 'tab-professor') {
+                content.classList.add('active');
+            } else {
+                content.classList.remove('active');
+            }
+        });
+        
+    } else {
+        // Diretor / Admin: Mostrar todas as abas e habilitar tudo
+        if (tabsNav) {
+            tabsNav.style.display = '';
+        }
+        tabButtons.forEach(btn => {
+            btn.style.display = 'inline-block';
+        });
+        const globalFilters = document.getElementById('global-filters');
+        if (globalFilters) {
+            globalFilters.style.display = 'block';
+        }
+        const selectProf = document.getElementById('select-professor');
+        if (selectProf) {
+            selectProf.disabled = false;
+            selectProf.style.backgroundColor = '';
+            selectProf.style.cursor = '';
+            selectProf.style.opacity = '';
+        }
+    }
+}
+
+async function checkAuthAndInit() {
+    console.log("[DEBUG] checkAuthAndInit iniciado!");
+    /* 1. Configurar os ouvintes de evento de login/logout síncronos imediatamente */
+    setupAuthHandlers();
+    
+    /* 2. Garantir renderização imediata dos ícones do Lucide na tela de login */
+    lucide.createIcons();
+    
+    /* 3. Inicializar o cliente do Supabase de forma assíncrona */
+    const hasSupabase = await initSupabaseClient();
+    
+    if (hasSupabase && supabaseClient) {
+        try {
+            // Verificar sessão remota do Supabase
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                await fetchUserProfile(true);
+                const authenticated = await loadData(true);
+                if (authenticated) {
+                    const loginOverlay = document.getElementById('login-overlay');
+                    const btnLogout = document.getElementById('btn-logout');
+                    
+                    if (loginOverlay) loginOverlay.classList.add('hidden');
+                    if (btnLogout) btnLogout.style.display = 'inline-flex';
+                    
+                    // Inicializar aplicação
+                    await initApp();
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error("[SUPABASE] Erro ao verificar sessão do usuário:", e);
+        }
+    }
+    
+    // Fallback local legado: tentar carregar dados silenciosamente se houver sessão local (cookie)
+    await fetchUserProfile(false);
+    const authenticated = await loadData(false);
+    if (authenticated) {
+        const loginOverlay = document.getElementById('login-overlay');
+        const btnLogout = document.getElementById('btn-logout');
+        
+        if (loginOverlay) loginOverlay.classList.add('hidden');
+        if (btnLogout) btnLogout.style.display = 'inline-flex';
+        
+        // Inicializar aplicação
+        await initApp();
+    }
+}
+
+function setupAuthHandlers() {
+    const loginForm = document.getElementById('login-form');
+    const loginOverlay = document.getElementById('login-overlay');
+    const usernameInput = document.getElementById('login-username');
+    const passwordInput = document.getElementById('login-password');
+    const btnTogglePassword = document.getElementById('btn-toggle-password');
+    const iconTogglePassword = document.getElementById('icon-toggle-password');
+    const errorMsg = document.getElementById('login-error-msg');
+    const errorText = document.getElementById('error-text');
+    const btnLogout = document.getElementById('btn-logout');
+
+    // Toggle de exibir/ocultar senha
+    if (btnTogglePassword && passwordInput) {
+        btnTogglePassword.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            iconTogglePassword.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+            lucide.createIcons();
+        });
+    }
+
+    // Evento de Login
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (errorMsg) errorMsg.style.display = 'none';
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (supabaseClient) {
+                // Autenticar com o Supabase Auth
+                try {
+                    // Mapear o username 'Diretor' para o email criado no Supabase Auth
+                    const email = username.includes('@') ? username : 'diretor@colegiorodin.com.br';
+                    
+                    const { data, error } = await supabaseClient.auth.signInWithPassword({
+                        email: email,
+                        password: password
+                    });
+
+                    if (error) {
+                        if (errorText) errorText.innerText = 'Usuário ou senha incorretos.';
+                        if (errorMsg) errorMsg.style.display = 'flex';
+                    } else if (data.session) {
+                        if (loginOverlay) loginOverlay.classList.add('hidden');
+                        if (btnLogout) btnLogout.style.display = 'inline-flex';
+                        
+                        // Carregar dados remotos do Supabase
+                        const loaded = await loadData(true);
+                        if (loaded) {
+                            await initApp();
+                        } else {
+                            if (errorText) errorText.innerText = 'Falha ao buscar dados do Supabase.';
+                            if (errorMsg) errorMsg.style.display = 'flex';
+                        }
+                    }
+                } catch (err) {
+                    console.error("Erro no login Supabase:", err);
+                    if (errorText) errorText.innerText = 'Erro ao se conectar ao Supabase Auth.';
+                    if (errorMsg) errorMsg.style.display = 'flex';
+                }
+            } else {
+                // Fallback local
+                try {
+                    const res = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && data.status === 'success') {
+                        // Obter dados ANTES de ocultar o overlay para evitar dashboard em branco em caso de erro
+                        const loaded = await loadData(false);
+                        if (loaded) {
+                            if (loginOverlay) loginOverlay.classList.add('hidden');
+                            if (btnLogout) btnLogout.style.display = 'inline-flex';
+                            await initApp();
+                        } else {
+                            if (errorText) errorText.innerText = 'Falha ao carregar os dados seguros do servidor.';
+                            if (errorMsg) errorMsg.style.display = 'flex';
+                        }
+                    } else {
+                        if (errorText) errorText.innerText = data.message || 'Usuário ou senha incorretos.';
+                        if (errorMsg) errorMsg.style.display = 'flex';
+                    }
+                } catch (err) {
+                    console.error("Erro na chamada de login:", err);
+                    if (errorText) errorText.innerText = 'Erro de rede ou conexão com o servidor local.';
+                    if (errorMsg) errorMsg.style.display = 'flex';
+                }
+            }
+        });
+    }
+
+    // Evento de Logout
+    if (btnLogout) {
+        btnLogout.addEventListener('click', async () => {
+            if (supabaseClient) {
+                try {
+                    await supabaseClient.auth.signOut();
+                    window.location.reload();
+                } catch (err) {
+                    console.error("Erro ao efetuar logout no Supabase:", err);
+                    window.location.reload();
+                }
+            } else {
+                try {
+                    await fetch('/api/logout', { method: 'POST' });
+                    window.location.reload();
+                } catch (err) {
+                    console.error("Erro ao efetuar logout local:", err);
+                    window.location.reload();
+                }
+            }
+        });
+    }
+}
 
 async function initApp() {
     // Registrar datalabels globalmente e desativar por padrão
@@ -143,23 +460,21 @@ async function initApp() {
         Chart.defaults.plugins.datalabels.display = false;
     }
     
+    // Garantir que o perfil do usuário esteja carregado e aplicar regras de UI
+    const isSupabaseActive = !!supabaseClient;
+    await fetchUserProfile(isSupabaseActive);
+    applyRBACUI();
+    
     // 1. Configurar Controle de Abas
     setupTabControls();
     
-    // 2. Carregar Dados do Servidor
-    const success = await loadData();
-    if (!success) {
-        alert("Erro ao carregar os dados. Certifique-se de que o servidor local está rodando em http://localhost:8000");
-        return;
-    }
-
-    // 3. Configurar Filtros Globais e Eventos
+    // 2. Configurar Filtros Globais e Eventos
     setupFilters();
     
-    // 4. Renderizar Tela Inicial (Visão Macro)
+    // 3. Renderizar Tela Inicial (Visão Macro)
     renderActiveTab();
     
-    // Inicializar Ícones Lucide
+    // Recriar ícones do Lucide para o dashboard recém-exibido
     lucide.createIcons();
 }
 
@@ -170,6 +485,10 @@ function setupTabControls() {
     const tabButtons = document.querySelectorAll('.tab-btn');
     tabButtons.forEach(btn => {
         btn.addEventListener('click', () => {
+            if (currentUserProfile && currentUserProfile.role === 'professor') {
+                // Impede a troca manual de abas para professores
+                return;
+            }
             const targetTab = btn.getAttribute('data-tab');
             
             // Alterar botão ativo
@@ -198,22 +517,123 @@ function setupTabControls() {
 }
 
 // -------------------------------------------------------------
-// Carregamento de Dados (AJAX)
+// Carregamento de Dados (AJAX / Supabase)
 // -------------------------------------------------------------
-async function loadData() {
-    try {
-        // Obter banco unificado
-        const resDb = await fetch('/data.json');
-        rawData = await resDb.json();
-        
-        // Obter arquivo de mapeamento
-        const resMap = await fetch('/mapeamento_professores.json');
-        mappingData = await resMap.json();
-        
-        return true;
-    } catch (e) {
-        console.error("Erro ao carregar JSON:", e);
-        return false;
+async function loadData(useSupabase = false) {
+    if (useSupabase && supabaseClient) {
+        try {
+            console.log("[SUPABASE] Buscando dados remotos do PostgreSQL...");
+            
+            // 1. Obter respostas do Supabase
+            const { data: resData, error: errDb } = await supabaseClient
+                .from('respostas')
+                .select('*');
+                
+            if (errDb) throw errDb;
+            
+            // 2. Obter mapeamentos do Supabase
+            const { data: mapData, error: errMap } = await supabaseClient
+                .from('mapeamento')
+                .select('*');
+                
+            if (errMap) throw errMap;
+            
+            // Converter respostas do Supabase para a estrutura rawData esperada pelo front-end
+            const answersConverted = resData.map(r => ({
+                id: r.id,
+                turma_pasta: r.turma_pasta,
+                turma_declarada: r.turma_declarada,
+                segmento: r.segmento,
+                professor: r.professor,
+                disciplina: r.disciplina,
+                timestamp: r.timestamp || "",
+                comentario: r.comentario || "",
+                ratings: {
+                    "Didática": r.didatica,
+                    "Apoio": r.apoio,
+                    "Tempo": r.tempo,
+                    "Avaliação": r.avaliacao,
+                    "Clima": r.clima,
+                    "Respeito": r.respeito,
+                    "Domínio": r.dominio
+                }
+            }));
+            
+            // Extrair listas únicas de professores e turmas
+            const uniqueProfs = [...new Set(answersConverted.map(r => r.professor))].sort();
+            const uniqueTurmas = [...new Set(answersConverted.map(r => r.turma_declarada))].sort();
+            
+            rawData = {
+                segmentos: ["Ensino Fundamental II", "Ensino Médio"],
+                turmas: uniqueTurmas,
+                professores: uniqueProfs,
+                atributos: [
+                    "Didática",
+                    "Apoio",
+                    "Tempo",
+                    "Avaliação",
+                    "Clima",
+                    "Respeito",
+                    "Domínio"
+                ],
+                respostas: answersConverted
+            };
+            
+            // Reconstruir o mappingData
+            mappingData = {};
+            mapData.forEach(m => {
+                if (!mappingData[m.turma_pasta]) {
+                    mappingData[m.turma_pasta] = [];
+                }
+                
+                let turmasArray = [];
+                if (m.turmas) {
+                    turmasArray = typeof m.turmas === 'string' ? JSON.parse(m.turmas) : m.turmas;
+                }
+                
+                mappingData[m.turma_pasta].push({
+                    block_index: m.block_index,
+                    start_column_index: m.start_column_index,
+                    teacher_name: m.teacher_name,
+                    discipline: m.discipline,
+                    turmas: turmasArray
+                });
+            });
+            
+            // Ordenar blocos por block_index
+            for (const key in mappingData) {
+                mappingData[key].sort((a, b) => a.block_index - b.block_index);
+            }
+            
+            return true;
+        } catch (e) {
+            console.error("Erro ao carregar dados do Supabase:", e);
+            return false;
+        }
+    } else {
+        // Lógica local legado
+        try {
+            const resDb = await fetch('/data.json');
+            if (resDb.status === 401) {
+                return false;
+            }
+            rawData = await resDb.json();
+            
+            if (currentUserProfile && currentUserProfile.role === 'professor') {
+                currentUserProfile.nomes_exibicao = rawData.professores || [];
+            }
+            
+            const resMap = await fetch('/mapeamento_professores.json');
+            if (resMap.status === 401) {
+                return false;
+            }
+            mappingData = await resMap.json();
+            
+            return true;
+        } catch (e) {
+            console.error("Erro ao carregar JSON:", e);
+            return false;
+        }
     }
 }
 
@@ -385,6 +805,17 @@ function getScoreColor(score) {
     if (score < 7.0) return '#FFCA28'; // Amarelo (Regular)
     if (score <= 8.5) return '#66BB6A'; // Verde (Bom)
     return '#42A5F5'; // Azul (Excelente)
+}
+
+// Helper para escapar caracteres especiais do HTML contra vulnerabilidades XSS (CWE-79)
+function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 // -------------------------------------------------------------
@@ -561,20 +992,60 @@ function renderVisaoProfessor() {
     const respostas = getFilteredResponses();
     const selectProf = document.getElementById('select-professor');
     
-    // Obter lista única de professores e preencher dropdown se estiver vazio
-    const profs = [...new Set(respostas.map(r => r.professor))].sort();
-    const prevSelection = selectProf.value;
-    
-    selectProf.innerHTML = '';
-    profs.forEach(p => {
-        selectProf.innerHTML += `<option value="${p}">${p}</option>`;
-    });
-    
-    // Restaurar seleção se ainda válida, senão usar o primeiro
-    if (prevSelection && profs.includes(prevSelection)) {
-        selectProf.value = prevSelection;
-    } else if (profs.length > 0) {
-        selectProf.value = profs[0];
+    // Se for perfil de professor, popular com as suas disciplinas
+    if (currentUserProfile && currentUserProfile.role === 'professor') {
+        const nomesExib = currentUserProfile.nomes_exibicao || [];
+        const prevSelection = selectProf.value;
+        
+        selectProf.innerHTML = '';
+        if (nomesExib.length > 1) {
+            selectProf.innerHTML += `<option value="all_mine">Todas as minhas matérias</option>`;
+        }
+        nomesExib.forEach(p => {
+            selectProf.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+        
+        // Restaurar seleção se válida, senão usar default
+        if (prevSelection && (prevSelection === "all_mine" || nomesExib.includes(prevSelection))) {
+            selectProf.value = prevSelection;
+        } else if (nomesExib.length > 1) {
+            selectProf.value = "all_mine";
+        } else if (nomesExib.length > 0) {
+            selectProf.value = nomesExib[0];
+        }
+        
+        if (nomesExib.length > 1) {
+            selectProf.disabled = false;
+            selectProf.style.backgroundColor = '';
+            selectProf.style.cursor = '';
+            selectProf.style.opacity = '';
+        } else {
+            selectProf.disabled = true;
+            selectProf.style.backgroundColor = 'var(--bg-2)';
+            selectProf.style.cursor = 'not-allowed';
+            selectProf.style.opacity = '0.8';
+        }
+    } else {
+        // Obter lista única de professores e preencher dropdown se estiver vazio
+        const profs = [...new Set(respostas.map(r => r.professor))].sort();
+        const prevSelection = selectProf.value;
+        
+        selectProf.innerHTML = '';
+        profs.forEach(p => {
+            selectProf.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+        
+        // Restaurar seleção se ainda válida, senão usar o primeiro
+        if (prevSelection && profs.includes(prevSelection)) {
+            selectProf.value = prevSelection;
+        } else if (profs.length > 0) {
+            selectProf.value = profs[0];
+        }
+        
+        selectProf.disabled = false;
+        selectProf.style.backgroundColor = '';
+        selectProf.style.cursor = '';
+        selectProf.style.opacity = '';
     }
     
     const selectedTeacher = selectProf.value;
@@ -584,7 +1055,13 @@ function renderVisaoProfessor() {
     selectProf.onchange = renderVisaoProfessor;
     
     // Filtrar dados do professor selecionado
-    const profResponses = respostas.filter(r => r.professor === selectedTeacher);
+    let profResponses;
+    if (selectedTeacher === "all_mine" && currentUserProfile && currentUserProfile.role === 'professor') {
+        const nomesExib = currentUserProfile.nomes_exibicao || [];
+        profResponses = respostas.filter(r => nomesExib.includes(r.professor));
+    } else {
+        profResponses = respostas.filter(r => r.professor === selectedTeacher);
+    }
     
     // 1. Calcular KPIs do Professor
     const notasProf = profResponses.flatMap(r => Object.values(r.ratings));
@@ -650,7 +1127,7 @@ function renderVisaoProfessor() {
             labels: ATRIBUTOS_OFICIAIS.map(a => a.split(' ')), // divide palavras em array para quebrar linha no radar
             datasets: [
                 {
-                    label: selectedTeacher,
+                    label: selectedTeacher === "all_mine" ? (currentUserProfile ? currentUserProfile.nome_professor : "Consolidado") : selectedTeacher,
                     data: mediaAtributosProf,
                     backgroundColor: 'rgba(244, 82, 6, 0.12)', // Laranja translúcido
                     borderColor: '#F45206', // Laranja do Colégio Rodin
@@ -992,6 +1469,12 @@ function renderVisaoQualitativo() {
     // PreencherDropdowns se estiverem vazios
     if (selectProf.options.length <= 1) {
         const profs = rawData.professores.sort();
+        selectProf.innerHTML = '';
+        if (currentUserProfile && currentUserProfile.role === 'professor') {
+            selectProf.innerHTML += `<option value="">Todas as minhas matérias</option>`;
+        } else {
+            selectProf.innerHTML += `<option value="">Todos os Professores</option>`;
+        }
         profs.forEach(p => {
             selectProf.innerHTML += `<option value="${p}">${p}</option>`;
         });
@@ -1050,9 +1533,9 @@ function renderVisaoQualitativo() {
         displayList.forEach(r => {
             htmlRows.push(`
                 <tr>
-                    <td class="bold">${r.turma_declarada}</td>
-                    <td><span class="badge u-graphite-bg" style="padding: var(--space-1) var(--space-2); color: white; font-size: 11px;">${r.professor}</span></td>
-                    <td class="comment-text">${r.comentario}</td>
+                    <td class="bold">${escapeHTML(r.turma_declarada)}</td>
+                    <td><span class="badge u-graphite-bg" style="padding: var(--space-1) var(--space-2); color: white; font-size: 11px;">${escapeHTML(r.professor)}</span></td>
+                    <td class="comment-text">${escapeHTML(r.comentario)}</td>
                 </tr>
             `);
         });
@@ -1106,13 +1589,13 @@ function renderVisaoMapeamento() {
                 <td class="bold">Professor Bloco ${b.block_index + 1}</td>
                 <td>Coluna ${b.start_column_index}</td>
                 <td>
-                    <input type="text" class="input-map-name" value="${b.teacher_name}" style="padding: var(--space-1) var(--space-2); width: 100%;">
+                    <input type="text" class="input-map-name" value="${escapeHTML(b.teacher_name)}" style="padding: var(--space-1) var(--space-2); width: 100%;">
                 </td>
                 <td>
-                    <input type="text" class="input-map-discipline" value="${b.discipline}" style="padding: var(--space-1) var(--space-2); width: 100%;">
+                    <input type="text" class="input-map-discipline" value="${escapeHTML(b.discipline)}" style="padding: var(--space-1) var(--space-2); width: 100%;">
                 </td>
                 <td>
-                    <input type="text" class="input-map-classes" value="${b.turmas ? b.turmas.join(', ') : ''}" placeholder="Ex: 1ª série A, 1ª série C" style="padding: var(--space-1) var(--space-2); width: 100%;">
+                    <input type="text" class="input-map-classes" value="${escapeHTML(b.turmas ? b.turmas.join(', ') : '')}" placeholder="Ex: 1ª série A, 1ª série C" style="padding: var(--space-1) var(--space-2); width: 100%;">
                 </td>
             </tr>
         `;
@@ -1148,10 +1631,41 @@ function renderVisaoMapeamento() {
         // 2. Atualizar no nosso mappingData global do cliente
         mappingData[selectedTurma] = updatedBlocks;
         
-        // 3. Chamar API do servidor para salvar em arquivo
         btnSave.disabled = true;
         btnSave.innerText = "SALVANDO...";
         
+        if (supabaseClient) {
+            try {
+                // Preparar dados para o Supabase
+                const dbBlocks = updatedBlocks.map(b => ({
+                    turma_pasta: selectedTurma,
+                    block_index: b.block_index,
+                    start_column_index: b.start_column_index,
+                    teacher_name: b.teacher_name,
+                    discipline: b.discipline,
+                    turmas: b.turmas || []
+                }));
+                
+                const { error } = await supabaseClient
+                    .from('mapeamento')
+                    .upsert(dbBlocks);
+                    
+                if (error) throw error;
+                
+                alert("Mapeamento atualizado no Supabase com sucesso!");
+                await loadData(true);
+                renderVisaoMapeamento();
+            } catch (err) {
+                console.error("Erro ao salvar mapeamento no Supabase:", err);
+                alert("Erro ao salvar mapeamento no Supabase: " + (err.message || err));
+            } finally {
+                btnSave.disabled = false;
+                btnSave.innerText = "SALVAR ALTERAÇÕES";
+            }
+            return;
+        }
+        
+        // Fallback local legado
         try {
             const response = await fetch('/api/save-mapping', {
                 method: 'POST',
@@ -1164,8 +1678,7 @@ function renderVisaoMapeamento() {
             const resData = await response.json();
             if (resData.status === 'success') {
                 alert("Mapeamento atualizado e dados consolidados com sucesso!");
-                // Re-carregar os dados atualizados para refletir as alterações no dashboard
-                await loadData();
+                await loadData(false);
                 renderVisaoMapeamento();
             } else {
                 alert("Erro ao salvar mapeamento: " + resData.message);
@@ -1178,4 +1691,15 @@ function renderVisaoMapeamento() {
             btnSave.innerText = "SALVAR ALTERAÇÕES";
         }
     };
+}
+
+/* Inicialização e Controle de Autenticação */
+console.log("[DEBUG] Bloco de inicialização final executado. document.readyState =", document.readyState);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("[DEBUG] Evento DOMContentLoaded disparado!");
+        checkAuthAndInit();
+    });
+} else {
+    checkAuthAndInit();
 }

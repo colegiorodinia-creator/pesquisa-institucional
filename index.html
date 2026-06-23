@@ -4,15 +4,65 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pesquisa Institucional — Colégio Rodin</title>
+    <!-- Favicon Oficial (Símbolo do Pensador do Colégio Rodin) -->
+    <link rel="icon" type="image/png" href="favicon.png?v=3">
     <!-- Importação de Estilo de Cores e Tipos do Rodin -->
-    <link rel="stylesheet" href="colors_and_type.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="colors_and_type.css?v=11">
+    <link rel="stylesheet" href="style.css?v=11">
     <!-- Bibliotecas Necessárias via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SDK Cliente Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="u-paper-bg">
+
+    <!-- Overlay de Login -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-brand">
+                <span class="rodin-divider"></span>
+                <div class="brand-text">
+                    <span class="eyebrow u-orange">Pesquisa Institucional</span>
+                    <h2 class="display">Colégio Rodin</h2>
+                </div>
+            </div>
+            
+            <p class="login-subtitle">Área restrita à diretoria. Insira suas credenciais para visualizar os dados consolidados.</p>
+            
+            <form id="login-form">
+                <div class="login-input-group">
+                    <label for="login-username">Usuário</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="user" class="input-icon"></i>
+                        <input type="text" id="login-username" placeholder="Digite seu usuário" required autocomplete="username">
+                    </div>
+                </div>
+                
+                <div class="login-input-group">
+                    <label for="login-password">Senha</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="lock" class="input-icon"></i>
+                        <input type="password" id="login-password" placeholder="Digite sua senha" required autocomplete="current-password">
+                        <button type="button" id="btn-toggle-password" class="btn-toggle-password" title="Mostrar/ocultar senha">
+                            <i data-lucide="eye" id="icon-toggle-password"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="login-error-msg" class="login-error-msg" style="display: none;">
+                    <i data-lucide="alert-circle" class="error-icon"></i>
+                    <span id="error-text">Usuário ou senha incorretos.</span>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-login">
+                    <span>Acessar Painel</span>
+                    <i data-lucide="log-in"></i>
+                </button>
+            </form>
+        </div>
+    </div>
 
     <!-- Header Principal -->
     <header class="main-header u-graphite-bg">
@@ -24,8 +74,14 @@
                     <h1 class="display">Colégio Rodin</h1>
                 </div>
             </div>
-            <div class="header-tag">
-                <span class="script u-orange">Raio-X Docente 2026</span>
+            <div class="header-right-side" style="display: flex; align-items: center; gap: var(--space-4);">
+                <div class="header-tag">
+                    <span class="script u-orange">Raio-X Docente 2026</span>
+                </div>
+                <button id="btn-logout" class="btn btn-ghost btn-sm" style="display: none; border-color: rgba(255,255,255,0.3); color: white; padding: var(--space-2) var(--space-4); border-radius: var(--radius-2); font-size: 11px;">
+                    <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
+                    <span>Sair</span>
+                </button>
             </div>
         </div>
     </header>
@@ -360,6 +416,6 @@
     </footer>
 
     <!-- Carregamento do Aplicativo -->
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=11"></script>
 </body>
 </html>

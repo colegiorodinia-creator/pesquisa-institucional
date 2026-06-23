@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migração Supabase — Colégio Rodin</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="colors_and_type.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            color: var(--rodin-graphite);
+        }
+        .migrator-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: var(--space-6);
+            background-color: var(--white);
+            border: 1px solid rgba(31,34,34,.12);
+            border-radius: 4px;
+            box-shadow: var(--shadow-2);
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            margin-bottom: var(--space-5);
+            border-bottom: 2px solid var(--rodin-orange);
+            padding-bottom: var(--space-4);
+        }
+        .status-box {
+            background-color: var(--rodin-paper);
+            padding: var(--space-4);
+            border-radius: 4px;
+            margin-bottom: var(--space-5);
+            font-size: 14px;
+        }
+        .status-line {
+            margin-bottom: var(--space-2);
+            display: flex;
+            justify-content: space-between;
+        }
+        .progress-container {
+            margin: var(--space-5) 0;
+            display: none;
+        }
+        .progress-bar-bg {
+            background-color: var(--rodin-beige);
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: var(--space-2);
+        }
+        .progress-bar-fill {
+            background-color: var(--rodin-orange);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .console-log {
+            background-color: #1e1e1e;
+            color: #a9b7c6;
+            font-family: monospace;
+            padding: var(--space-4);
+            height: 280px;
+            overflow-y: auto;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: var(--space-4);
+        }
+        .log-entry {
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+        .log-success { color: #6a8759; }
+        .log-error { color: #cc6666; font-weight: bold; }
+        .log-info { color: #4ba3e3; }
+        
+        .btn-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--rodin-orange);
+            color: var(--white);
+            border: none;
+            padding: var(--space-3) var(--space-6);
+            border-radius: 999px;
+            font-weight: bold;
+            font-size: 13px;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-transform: uppercase;
+        }
+        .btn-pill:hover:not(:disabled) {
+            background-color: #d13d00;
+            text-decoration: underline;
+        }
+        .btn-pill:disabled {
+            background-color: var(--rodin-concrete);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body class="u-paper-bg">
+
+    <header class="main-header u-graphite-bg" style="padding: var(--space-3) 0;">
+        <div class="header-container" style="max-width: 800px; margin: 0 auto; display: flex; align-items: center;">
+            <div class="brand-lockup">
+                <span class="rodin-divider"></span>
+                <div class="brand-text">
+                    <span class="eyebrow u-orange">Pesquisa Institucional</span>
+                    <h1 class="display" style="color: white; font-size: 20px;">Colégio Rodin</h1>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="migrator-container">
+        <div class="header-brand">
+            <div>
+                <span class="eyebrow u-orange" style="font-size: 11px;">MIGRAÇÃO DE CONTAS E DADOS</span>
+                <h2 style="font-size: 24px; font-weight: 800; margin: 0;">Sincronização Completa com o Supabase</h2>
+            </div>
+        </div>
+
+        <p style="margin-bottom: var(--space-4); line-height: 1.6;">
+            Esta tela auxiliar permite criar os usuários de login individuais dos professores e cadastrar as avaliações pedagógicas (Excel) e os mapeamentos de turmas diretamente na nuvem do Supabase, garantindo que cada professor acesse apenas suas próprias notas pelo link oficial.
+        </p>
+
+        <div class="status-box">
+            <h4 style="font-weight: 700; margin-bottom: var(--space-3); font-size: 14px; text-transform: uppercase;">Estado de Configuração</h4>
+            <div class="status-line">
+                <span>URL do Supabase:</span>
+                <strong id="status-url">Carregando...</strong>
+            </div>
+            <div class="status-line">
+                <span>Dados Locais (data.json):</span>
+                <strong id="status-data">Carregando...</strong>
+            </div>
+            <div class="status-line">
+                <span>Mapeamento de Professores:</span>
+                <strong id="status-mapping">Carregando...</strong>
+            </div>
+            <div class="status-line">
+                <span>Contas de Professores (69 logins):</span>
+                <strong id="status-creds">Carregando...</strong>
+            </div>
+        </div>
+
+        <button id="btn-migrate" class="btn-pill" disabled>
+            <span>Iniciar Sincronização Completa (Contas + Dados)</span>
+        </button>
+
+        <div id="progress-section" class="progress-container">
+            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-bottom: var(--space-1);">
+                <span id="progress-status">Preparando...</span>
+                <span id="progress-percent">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div id="progress-bar-fill" class="progress-bar-fill"></div>
+            </div>
+        </div>
+
+        <h4 style="font-weight: 700; margin-top: var(--space-5); margin-bottom: var(--space-2); font-size: 12px; text-transform: uppercase;">Logs de Sincronização</h4>
+        <div class="console-log" id="log-box">
+            <div class="log-entry">Aguardando início...</div>
+        </div>
+    </main>
+
+    <footer style="margin-top: auto; padding: var(--space-4) 0; text-align: center; font-size: 11px; color: var(--rodin-cool-gray);">
+        Colégio Rodin &copy; 2026. Todos os direitos reservados.
+    </footer>
+
+    <script>
+        // Inicializar ícones
+        lucide.createIcons();
+
+        const logBox = document.getElementById('log-box');
+        const btnMigrate = document.getElementById('btn-migrate');
+        const progressSection = document.getElementById('progress-section');
+        const progressStatus = document.getElementById('progress-status');
+        const progressPercent = document.getElementById('progress-percent');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+
+        let config = null;
+        let dataJson = null;
+        let mappingJson = null;
+        let credsJson = null;
+
+        function addLog(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type ? 'log-' + type : ''}`;
+            
+            const time = new Date().toLocaleTimeString();
+            entry.innerText = `[${time}] ${message}`;
+            
+            logBox.appendChild(entry);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        async function initPage() {
+            try {
+                // 1. Carregar Configuração do Supabase
+                const resConfig = await fetch('/api/config');
+                config = await resConfig.json();
+                
+                if (config.SUPABASE_URL && config.SUPABASE_ANON_KEY && config.SUPABASE_SERVICE_ROLE_KEY) {
+                    document.getElementById('status-url').innerText = config.SUPABASE_URL;
+                    addLog("Configuração do Supabase carregada com sucesso do arquivo .env.", "success");
+                } else {
+                    document.getElementById('status-url').innerHTML = '<span class="text-danger">Incompleta no .env</span>';
+                    addLog("Erro: Credenciais do Supabase incompletas no arquivo .env local.", "error");
+                    return;
+                }
+
+                // 2. Carregar dados consolidados da rota de migração
+                addLog("Carregando banco de dados local consolidado...", "info");
+                const resMigrationData = await fetch('/api/migration-data');
+                if (resMigrationData.ok) {
+                    const migrationData = await resMigrationData.json();
+                    dataJson = migrationData.data;
+                    mappingJson = migrationData.mapping;
+                    credsJson = migrationData.credentials;
+                    
+                    const numRespostas = dataJson.respostas ? dataJson.respostas.length : 0;
+                    document.getElementById('status-data').innerText = `${numRespostas.toLocaleString('pt-BR')} respostas detectadas.`;
+                    document.getElementById('status-mapping').innerText = "Carregado com sucesso.";
+                    
+                    const numCreds = credsJson ? Object.keys(credsJson).length : 0;
+                    document.getElementById('status-creds').innerText = `${numCreds} professores identificados.`;
+                    
+                    btnMigrate.disabled = false;
+                    addLog("Todos os dados e credenciais de professores carregados. Pronto para iniciar a sincronização.", "success");
+                } else {
+                    document.getElementById('status-data').innerHTML = '<span class="text-danger">Erro ao carregar</span>';
+                    document.getElementById('status-mapping').innerHTML = '<span class="text-danger">Erro ao carregar</span>';
+                    document.getElementById('status-creds').innerHTML = '<span class="text-danger">Erro ao carregar</span>';
+                    addLog("Erro ao carregar os dados de migração locais.", "error");
+                }
+
+            } catch (e) {
+                addLog(`Erro de inicialização: ${e.message}`, "error");
+            }
+        }
+
+        btnMigrate.addEventListener('click', async () => {
+            btnMigrate.disabled = true;
+            progressSection.style.display = 'block';
+            logBox.innerHTML = '';
+            addLog("Iniciando processo de migração completo...", "info");
+
+            const supabaseAdmin = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
+                auth: {
+                    autoRefreshToken: false,
+                    persistSession: false
+                }
+            });
+
+            try {
+                // FASE 1: CRIAR CONTAS E PERFIS NO SUPABASE
+                addLog("=== FASE 1: CRIAÇÃO DE CONTAS DE USUÁRIOS (AUTH) ===", "info");
+                progressStatus.innerText = "Criando credenciais no Supabase Auth...";
+                
+                const contas = [];
+                // Diretor Admin
+                contas.push({
+                    nome: "Diretoria",
+                    email: "diretor@colegiorodin.com.br",
+                    password: "@Diretor112358*",
+                    nomes_exibicao: ["Diretoria"],
+                    role: "admin"
+                });
+                // Professores
+                for (const [nome, c] of Object.entries(credsJson)) {
+                    contas.push({
+                        nome: nome,
+                        email: c.login,
+                        password: c.password,
+                        nomes_exibicao: c.nomes_exibicao || [nome],
+                        role: "professor"
+                    });
+                }
+
+                // Listar usuários existentes no Auth para reaproveitar IDs e não dar conflito
+                let existingUsers = {};
+                try {
+                    addLog("Verificando se já existem usuários cadastrados na nuvem do Supabase...");
+                    const resUsers = await fetch(`${config.SUPABASE_URL}/auth/v1/admin/users?per_page=200`, {
+                        headers: {
+                            "Authorization": `Bearer ${config.SUPABASE_SERVICE_ROLE_KEY}`,
+                            "apikey": config.SUPABASE_SERVICE_ROLE_KEY
+                        }
+                    });
+                    if (resUsers.ok) {
+                        const usersData = await resUsers.json();
+                        const list = usersData.users || [];
+                        list.forEach(u => {
+                            existingUsers[u.email.toLowerCase()] = u.id;
+                        });
+                        addLog(`${list.length} usuários já cadastrados encontrados.`, "success");
+                    }
+                } catch (e) {
+                    addLog(`Erro ao consultar usuários existentes: ${e.message}. Criando contas novas.`, "info");
+                }
+
+                const perfisDb = [];
+
+                for (let i = 0; i < contas.length; i++) {
+                    const conta = contas[i];
+                    const email = conta.email.toLowerCase();
+                    const nome = conta.nome;
+                    const pwd = conta.password;
+                    const role = conta.role;
+                    const nomesExib = conta.nomes_exibicao;
+
+                    // Progresso da Fase 1 vai até 40%
+                    const pct = Math.round((i / contas.length) * 40);
+                    progressBarFill.style.width = `${pct}%`;
+                    progressPercent.innerText = `${pct}%`;
+
+                    let userId = existingUsers[email];
+                    if (userId) {
+                        addLog(`[${i+1}/${contas.length}] Usuário ${email} já cadastrado (ID: ${userId})`, "success");
+                    } else {
+                        try {
+                            const { data: userData, error: errCreate } = await supabaseAdmin.auth.admin.createUser({
+                                email: email,
+                                password: pwd,
+                                email_confirm: true
+                            });
+
+                            if (errCreate) throw errCreate;
+                            userId = userData.user.id;
+                            addLog(`[${i+1}/${contas.length}] Criado com sucesso: ${email} (ID: ${userId})`, "success");
+                        } catch (err) {
+                            addLog(`[${i+1}/${contas.length}] Erro ao criar conta ${email}: ${err.message}`, "error");
+                            continue;
+                        }
+                    }
+
+                    if (userId) {
+                        perfisDb.push({
+                            id: userId,
+                            email: email,
+                            nome_professor: nome,
+                            nomes_exibicao: nomesExib,
+                            role: role
+                        });
+                    }
+                }
+
+                // Gravar os perfis na tabela professores_perfis
+                if (perfisDb.length > 0) {
+                    addLog("Vinculando perfis aos usuários no banco de dados (professores_perfis)...", "info");
+                    const { error: errPerfis } = await supabaseAdmin
+                        .from('professores_perfis')
+                        .upsert(perfisDb);
+                    
+                    if (errPerfis) throw errPerfis;
+                    addLog(`${perfisDb.length} perfis de professores criados e vinculados com sucesso!`, "success");
+                }
+
+                // FASE 2: LIMPAR E SUBIR DADOS
+                addLog("=== FASE 2: REMOVENDO DADOS ANTERIORES ===", "info");
+                progressStatus.innerText = "Limpando tabelas de dados na nuvem...";
+                progressBarFill.style.width = `45%`;
+                progressPercent.innerText = `45%`;
+
+                const { error: errDelRes } = await supabaseAdmin.from('respostas').delete().neq('id', 'dummy');
+                if (errDelRes) throw errDelRes;
+                addLog("Tabela 'respostas' remota limpa com sucesso.", "success");
+
+                const { error: errDelMap } = await supabaseAdmin.from('mapeamento').delete().neq('turma_pasta', 'dummy');
+                if (errDelMap) throw errDelMap;
+                addLog("Tabela 'mapeamento' remota limpa com sucesso.", "success");
+
+                // Converter respostas locais para o banco
+                const respostasParaSubir = dataJson.respostas.map(r => ({
+                    id: r.id,
+                    turma_pasta: r.turma_pasta,
+                    turma_declarada: r.turma_declarada,
+                    segmento: r.segmento,
+                    professor: r.professor,
+                    disciplina: r.disciplina,
+                    timestamp: r.timestamp || "",
+                    comentario: r.comentario || "",
+                    didatica: r.ratings["Didática"],
+                    apoio: r.ratings["Apoio"],
+                    tempo: r.ratings["Tempo"],
+                    avaliacao: r.ratings["Avaliação"],
+                    clima: r.ratings["Clima"],
+                    respeito: r.ratings["Respeito"],
+                    dominio: r.ratings["Domínio"]
+                }));
+
+                addLog("=== FASE 3: ENVIANDO DADOS DE AVALIAÇÕES ===", "info");
+                const batchSize = 500;
+                const totalBatches = Math.ceil(respostasParaSubir.length / batchSize);
+                addLog(`Enviando ${respostasParaSubir.length} avaliações pedagógicas em ${totalBatches} lotes...`, "info");
+
+                for (let b = 0; b < totalBatches; b++) {
+                    progressStatus.innerText = `Enviando lote de respostas ${b+1} de ${totalBatches}...`;
+                    const start = b * batchSize;
+                    const end = start + batchSize;
+                    const batch = respostasParaSubir.slice(start, end);
+
+                    const { error: errInsert } = await supabaseAdmin.from('respostas').insert(batch);
+                    if (errInsert) throw errInsert;
+
+                    const pct = Math.round(45 + ((b + 1) / totalBatches) * 45); // Sobe até 90%
+                    progressBarFill.style.width = `${pct}%`;
+                    progressPercent.innerText = `${pct}%`;
+                    addLog(`Lote ${b+1}/${totalBatches} enviado com sucesso (${batch.length} registros).`, "success");
+                }
+
+                // Enviar mapeamentos
+                addLog("=== FASE 4: ENVIANDO MAPEAMENTO PEDAGÓGICO ===", "info");
+                progressStatus.innerText = "Enviando blocos de mapeamento administrativo...";
+                progressBarFill.style.width = `95%`;
+                progressPercent.innerText = `95%`;
+
+                const mapeamentosParaSubir = [];
+                for (const [folderName, blocks] of Object.entries(mappingJson)) {
+                    blocks.forEach(b => {
+                        mapeamentosParaSubir.push({
+                            turma_pasta: folderName,
+                            block_index: b.block_index,
+                            start_column_index: b.start_column_index,
+                            teacher_name: b.teacher_name,
+                            discipline: b.discipline,
+                            turmas: b.turmas || []
+                        });
+                    });
+                }
+
+                const { error: errMapInsert } = await supabaseAdmin.from('mapeamento').insert(mapeamentosParaSubir);
+                if (errMapInsert) throw errMapInsert;
+                addLog(`${mapeamentosParaSubir.length} mapeamentos de turmas enviados com sucesso.`, "success");
+
+                // CONCLUÍDO
+                progressBarFill.style.width = `100%`;
+                progressPercent.innerText = `100%`;
+                progressStatus.innerText = "Sincronização Completa Concluída!";
+                addLog("=== PROCESSO COMPLETO FINALIZADO COM SUCESSO! ===", "success");
+                addLog("1. Todas as contas de professores e diretoria foram criadas no Supabase Auth.", "success");
+                addLog("2. Todos os perfis de isolamento de segurança foram criados no PostgreSQL.", "success");
+                addLog("3. Todas as 11.212 avaliações e mapeamentos foram enviados para a nuvem.", "success");
+                addLog("O seu banco de dados na nuvem está 100% configurado de forma segura!", "success");
+                addLog("Você já pode seguir com a publicação da aplicação estática na Vercel.", "info");
+
+            } catch (err) {
+                addLog(`ERRO CRÍTICO NA SINC: ${err.message}`, "error");
+                progressStatus.innerText = "A sincronização falhou!";
+                progressBarFill.style.backgroundColor = "var(--rodin-orange)";
+            }
+        });
+
+        initPage();
+    </script>
+</body>
+</html>

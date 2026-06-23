@@ -3,10 +3,26 @@ import sys
 import sqlite3
 import pandas as pd
 import json
+from dotenv import load_dotenv
+import urllib.request
+import urllib.error
 
 # Forçar console UTF-8 para evitar caracteres quebrados em Windows
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
+
+# Carregar arquivo .env
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+IS_SUPABASE_CONFIGURED = (
+    SUPABASE_URL and 
+    "seu-projeto" not in SUPABASE_URL and 
+    SUPABASE_KEY and 
+    "sua-chave" not in SUPABASE_KEY
+)
 
 workspace = r"c:\Users\MARKETING 03\Documents\Antigravity\Pesquisa Institucional"
 excel_path = os.path.join(workspace, "Pesquisa - 2026.xlsx")
@@ -57,10 +73,15 @@ def clean_turma(name, sheet_name):
 def clean_rating(val):
     if pd.isna(val):
         return None
-    if isinstance(val, (int, float)):
-        if 1.0 <= val <= 4.0:
-            return float(val)
-        return None
+    
+    # Suportar tipos de dados numéricos (incluindo numpy.int64/float64) de forma robusta
+    try:
+        val_float = float(val)
+        if 1.0 <= val_float <= 4.0:
+            return val_float
+    except (ValueError, TypeError):
+        pass
+        
     if isinstance(val, str):
         val_clean = val.strip().lower()
         if val_clean == "sempre":
@@ -71,12 +92,7 @@ def clean_rating(val):
             return 2.0
         elif val_clean == "nunca":
             return 1.0
-        try:
-            val_float = float(val)
-            if 1.0 <= val_float <= 4.0:
-                return val_float
-        except ValueError:
-            pass
+            
     return None
 
 def format_teacher_display_name(col_name):
@@ -95,16 +111,55 @@ def main():
         print(f"Erro: Arquivo {excel_path} não encontrado!")
         sys.exit(1)
         
+    # Configurar funções REST auxiliares para o Supabase usando urllib nativo
+    def make_supabase_request(url, method, data=None):
+        headers = {
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "apikey": SUPABASE_KEY,
+            "Content-Type": "application/json"
+        }
+        req_data = None
+        if data is not None:
+            req_data = json.dumps(data).encode('utf-8')
+        req = urllib.request.Request(url, data=req_data, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req) as res:
+                body = res.read().decode('utf-8')
+                return json.loads(body) if body else {}
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode('utf-8')
+            raise Exception(f"HTTP {e.code}: {err_body}")
+
+    # Inicializar e limpar Supabase remoto
+    supabase_active = False
+    if IS_SUPABASE_CONFIGURED:
+        print("[SUPABASE] Supabase configurado! Inicializando conexão remota via REST API...")
+        try:
+            clean_url = SUPABASE_URL.rstrip('/')
+            # Apagar respostas antigas
+            print("[SUPABASE] Removendo dados antigos de 'respostas'...")
+            make_supabase_request(f"{clean_url}/rest/v1/respostas?id=neq.dummy", "DELETE")
+            # Apagar mapeamentos antigos
+            print("[SUPABASE] Removendo dados antigos de 'mapeamento'...")
+            make_supabase_request(f"{clean_url}/rest/v1/mapeamento?turma_pasta=neq.dummy", "DELETE")
+            print("[SUPABASE] Dados antigos removidos das tabelas remotas com sucesso.")
+            supabase_active = True
+        except Exception as e:
+            print(f"[SUPABASE] Erro ao conectar ou limpar Supabase: {e}. Executando apenas importação local.")
+            supabase_active = False
+    else:
+        print("[INFO] Supabase não configurado no .env. Executando apenas importação local.")
+
     # 1. Excluir o banco de dados anterior
     if os.path.exists(db_path):
         print(f"Removendo banco de dados SQLite anterior em: {db_path}")
         try:
             os.remove(db_path)
         except Exception as e:
-            print(f"Erro ao remover banco de dados: {e}. Certifique-se de que nenhum processo (como o servidor) o está bloqueando.")
+            print(f"Erro ao remover banco de dados: {e}. Certifique-se de que nenhum processo o está bloqueando.")
             sys.exit(1)
             
-    # 2. Criar novo banco e tabelas
+    # 2. Criar novo banco e tabelas locais
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
@@ -151,6 +206,7 @@ def main():
     xl = pd.ExcelFile(excel_path)
     
     all_responses = []
+    supabase_responses_batch = []
     classes_global = set()
     teachers_global = set()
     mapping_dict = {}
@@ -195,7 +251,7 @@ def main():
                 
         print(f"  Detectados {len(teacher_blocks)} blocos de professores na aba.")
         
-        # Salvar mapeamento para o JSON/SQLite
+        # Salvar mapeamento local
         mapping_dict[folder_name] = teacher_blocks
         for b in teacher_blocks:
             cursor.execute("""
@@ -244,6 +300,7 @@ def main():
                     clean_folder = folder_name.replace(' ', '_').replace('º', '').replace('ª', '').replace('é', 'e')
                     resp_id = f"2026_{clean_folder}_{row_idx}_{block['block_index']}"
                     
+                    # Inserir local SQLite
                     cursor.execute("""
                     INSERT INTO respostas (
                         id, turma_pasta, turma_declarada, segmento, professor, disciplina, timestamp, comentario,
@@ -254,7 +311,7 @@ def main():
                         didatica, apoio, tempo, avaliacao, clima, respeito, dominio
                     ))
                     
-                    # Record para o JSON
+                    # Record local do JSON
                     response_record = {
                         "id": resp_id,
                         "turma_pasta": folder_name,
@@ -275,6 +332,27 @@ def main():
                         "comentario": ""
                     }
                     all_responses.append(response_record)
+                    
+                    # Record do Supabase
+                    if supabase_active:
+                        supabase_responses_batch.append({
+                            "id": resp_id,
+                            "turma_pasta": folder_name,
+                            "turma_declarada": turma_declarada,
+                            "segmento": segmento,
+                            "professor": prof_name,
+                            "disciplina": discipline,
+                            "timestamp": "",
+                            "comentario": "",
+                            "didatica": didatica,
+                            "apoio": apoio,
+                            "tempo": tempo,
+                            "avaliacao": avaliacao,
+                            "clima": clima,
+                            "respeito": respeito,
+                            "dominio": dominio
+                        })
+                    
                     response_count += 1
                     
         print(f"  Importadas {response_count} avaliações de professores na aba '{sheet_name}'.")
@@ -286,7 +364,41 @@ def main():
     conn.commit()
     conn.close()
     
-    # 5. Salvar o arquivo data.json consolidado
+    # 5. Enviar respostas em batches para o Supabase
+    if supabase_active and supabase_responses_batch:
+        print(f"\n[SUPABASE] Enviando {len(supabase_responses_batch)} registros em lotes para o Supabase PostgreSQL...")
+        batch_size = 500
+        clean_url = SUPABASE_URL.rstrip('/')
+        for i in range(0, len(supabase_responses_batch), batch_size):
+            batch = supabase_responses_batch[i:i+batch_size]
+            try:
+                insert_url = f"{clean_url}/rest/v1/respostas"
+                make_supabase_request(insert_url, "POST", batch)
+                print(f"  - Enviado lote {i // batch_size + 1} ({len(batch)} registros)")
+            except Exception as ex:
+                print(f"  - [ERRO] Falha ao enviar lote de respostas no Supabase: {ex}")
+                
+        # Enviar mapeamento para o Supabase
+        print("[SUPABASE] Enviando dados de mapeamento administrativo...")
+        supabase_mapeamentos = []
+        for folder_name, blocks in mapping_dict.items():
+            for b in blocks:
+                supabase_mapeamentos.append({
+                    "turma_pasta": folder_name,
+                    "block_index": b["block_index"],
+                    "start_column_index": b["start_column_index"],
+                    "teacher_name": b["teacher_name"],
+                    "discipline": b["discipline"],
+                    "turmas": b.get("turmas", [])
+                })
+        try:
+            insert_map_url = f"{clean_url}/rest/v1/mapeamento"
+            make_supabase_request(insert_map_url, "POST", supabase_mapeamentos)
+            print("[SUPABASE] Mapeamento administrativo enviado com sucesso.")
+        except Exception as ex:
+            print(f"[SUPABASE] [ERRO] Falha ao enviar mapeamentos: {ex}")
+
+    # 6. Salvar o arquivo data.json consolidado
     db_data = {
         "segmentos": ["Ensino Fundamental II", "Ensino Médio"],
         "turmas": sorted(list(classes_global)),
@@ -306,7 +418,7 @@ def main():
     with open(output_db_path, "w", encoding="utf-8") as f:
         json.dump(db_data, f, indent=4, ensure_ascii=False)
         
-    # 6. Salvar o arquivo mapeamento_professores.json consolidado
+    # 7. Salvar o arquivo mapeamento_professores.json consolidado
     with open(workspace_mapping_path, "w", encoding="utf-8") as f:
         json.dump(mapping_dict, f, indent=4, ensure_ascii=False)
         
@@ -317,6 +429,8 @@ def main():
     print(f" mapeamento_professores.json gerado.")
     print(f" Total de professores cadastrados: {len(teachers_global)}")
     print(f" Total de turmas encontradas: {len(classes_global)}")
+    if supabase_active:
+        print(f" SUPABASE ATUALIZADO: {len(supabase_responses_batch)} registros remotos.")
     print(f"=======================================================\n")
 
 if __name__ == '__main__':

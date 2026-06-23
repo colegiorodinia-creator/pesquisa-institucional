@@ -185,17 +185,27 @@ def identify_attribute(col_name):
     return None
 
 def clean_likert(val):
-    if pd.isna(val) or not isinstance(val, str):
+    if pd.isna(val):
         return None
-    val_clean = val.strip().lower()
-    if val_clean == "sempre":
-        return 4
-    elif val_clean == "quase sempre":
-        return 3
-    elif val_clean in ["poucas vezes", "poucas vezez", "poucas vezes.", "poucas vezez."]:
-        return 2
-    elif val_clean == "nunca":
-        return 1
+        
+    try:
+        val_float = float(val)
+        if 1.0 <= val_float <= 4.0:
+            return int(val_float)
+    except (ValueError, TypeError):
+        pass
+        
+    if isinstance(val, str):
+        val_clean = val.strip().lower()
+        if val_clean == "sempre":
+            return 4
+        elif val_clean == "quase sempre":
+            return 3
+        elif val_clean in ["poucas vezes", "poucas vezez", "poucas vezes.", "poucas vezez."]:
+            return 2
+        elif val_clean == "nunca":
+            return 1
+            
     return None
 
 def clean_turma_6ano(name):
@@ -561,6 +571,44 @@ def run_processing():
     with open(workspace_mapping_path, "w", encoding="utf-8") as f:
         json.dump(current_mapping, f, indent=4, ensure_ascii=False)
     print(f"\nMapeamento de professores consolidado salvo em: {workspace_mapping_path}")
+
+    # Sincronizar com Supabase se configurado
+    from dotenv import load_dotenv
+    load_dotenv()
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    
+    IS_SUPABASE_CONFIGURED = (
+        SUPABASE_URL and 
+        "seu-projeto" not in SUPABASE_URL and 
+        SUPABASE_KEY and 
+        "sua-chave" not in SUPABASE_KEY
+    )
+    
+    if IS_SUPABASE_CONFIGURED:
+        print("\n[SUPABASE] Sincronizando mapeamento administrativo com o Supabase...")
+        try:
+            from supabase import create_client
+            supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+            
+            # Limpar e reenviar a tabela mapeamento
+            supabase_client.table("mapeamento").delete().neq("turma_pasta", "").execute()
+            
+            supabase_mapeamentos = []
+            for folder_name, blocks in current_mapping.items():
+                for b in blocks:
+                    supabase_mapeamentos.append({
+                        "turma_pasta": folder_name,
+                        "block_index": b["block_index"],
+                        "start_column_index": b["start_column_index"],
+                        "teacher_name": b["teacher_name"],
+                        "discipline": b["discipline"],
+                        "turmas": b.get("turmas", [])
+                    })
+            supabase_client.table("mapeamento").insert(supabase_mapeamentos).execute()
+            print("[SUPABASE] Sincronização de mapeamento concluída com sucesso.")
+        except Exception as ex:
+            print(f"[SUPABASE] [ERRO] Falha ao sincronizar mapeamento: {ex}")
 
     # Salvar data.json consolidado (para manter compatibilidade imediata com o frontend)
     db_data = {

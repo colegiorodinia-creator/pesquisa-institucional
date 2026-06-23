@@ -9,3 +9,8 @@ __pycache__/
 .vscode/
 .gemini/
 .antigravity/
+.env
+professores_credenciais.json
+professores_credenciais_backup.json
+scratch/
+pesquisa.db
