@@ -524,12 +524,27 @@ async function loadData(useSupabase = false) {
         try {
             console.log("[SUPABASE] Buscando dados remotos do PostgreSQL...");
             
-            // 1. Obter respostas do Supabase
-            const { data: resData, error: errDb } = await supabaseClient
-                .from('respostas')
-                .select('*');
+            // 1. Obter todas as respostas do Supabase usando paginação (limite padrão do PostgREST é 1000)
+            let resData = [];
+            let start = 0;
+            let limit = 1000;
+            let hasMore = true;
+            
+            while (hasMore) {
+                const { data: batch, error: errDb } = await supabaseClient
+                    .from('respostas')
+                    .select('*')
+                    .range(start, start + limit - 1);
+                    
+                if (errDb) throw errDb;
                 
-            if (errDb) throw errDb;
+                resData = resData.concat(batch);
+                if (batch.length < limit) {
+                    hasMore = false;
+                } else {
+                    start += limit;
+                }
+            }
             
             // 2. Obter mapeamentos do Supabase
             const { data: mapData, error: errMap } = await supabaseClient
