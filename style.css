@@ -60,6 +60,10 @@ body {
     line-height: var(--lh-tight);
 }
 
+.main-header .brand-text .display {
+    color: var(--rodin-white);
+}
+
 .header-tag {
     font-size: var(--fs-h3);
 }
