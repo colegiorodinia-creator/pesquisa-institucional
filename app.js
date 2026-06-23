@@ -309,24 +309,36 @@ async function checkAuthAndInit() {
                     await initApp();
                     return;
                 }
+            } else {
+                console.log("[AUTH] Sem sessão do Supabase ativa. Exibindo tela de login obrigatoriamente.");
+                const loginOverlay = document.getElementById('login-overlay');
+                const btnLogout = document.getElementById('btn-logout');
+                if (loginOverlay) loginOverlay.classList.remove('hidden');
+                if (btnLogout) btnLogout.style.display = 'none';
+                return;
             }
         } catch (e) {
             console.error("[SUPABASE] Erro ao verificar sessão do usuário:", e);
         }
-    }
-    
-    // Fallback local legado: tentar carregar dados silenciosamente se houver sessão local (cookie)
-    await fetchUserProfile(false);
-    const authenticated = await loadData(false);
-    if (authenticated) {
-        const loginOverlay = document.getElementById('login-overlay');
-        const btnLogout = document.getElementById('btn-logout');
-        
-        if (loginOverlay) loginOverlay.classList.add('hidden');
-        if (btnLogout) btnLogout.style.display = 'inline-flex';
-        
-        // Inicializar aplicação
-        await initApp();
+    } else {
+        // Fallback local legado (apenas quando Supabase não estiver configurado/ativo)
+        await fetchUserProfile(false);
+        const authenticated = await loadData(false);
+        if (authenticated) {
+            const loginOverlay = document.getElementById('login-overlay');
+            const btnLogout = document.getElementById('btn-logout');
+            
+            if (loginOverlay) loginOverlay.classList.add('hidden');
+            if (btnLogout) btnLogout.style.display = 'inline-flex';
+            
+            // Inicializar aplicação
+            await initApp();
+        } else {
+            const loginOverlay = document.getElementById('login-overlay');
+            const btnLogout = document.getElementById('btn-logout');
+            if (loginOverlay) loginOverlay.classList.remove('hidden');
+            if (btnLogout) btnLogout.style.display = 'none';
+        }
     }
 }
 
